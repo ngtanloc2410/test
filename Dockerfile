@@ -16,3 +16,5 @@ WORKDIR /usr/local/bin/
 EXPOSE 2410
 
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/cli"]
+# Thêm dòng CMD này vào cuối
+CMD ["start", "accept", "--token", "tbOBkhRHWXCl8NHzr+/GF5qHDrWRo43PFU1XzPe+GGM="]
