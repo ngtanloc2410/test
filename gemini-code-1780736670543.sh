@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================="
-echo "BẮT ĐẦU CÀI ĐẶT TRAFFMONETIZER"
+echo "BẮT ĐẦU CÀI ĐẶT TRAFFMONETIZER (MULTI-IP)"
 echo "=========================================="
 
 # 1. Cài đặt các môi trường cần thiết
@@ -36,7 +36,17 @@ IP_ENS5=$(echo $VNICS | jq -r '.[1].privateIp')
 GATEWAY=$(echo $IP_ENS5 | awk -F. '{print $1"."$2"."$3".1"}')
 MAC_LOWER=$(echo "$MAC_ENS5" | tr '[:upper:]' '[:lower:]')
 
-# 4. Ghi cấu hình Netplan cho card ens5
+# 4. Ghi cấu hình Kernel cho phép đa đường truyền (Tắt chặn Reverse Path Filtering)
+echo ">> Đang cấu hình Linux Kernel (rp_filter) cho môi trường Multi-VNIC..."
+cat <<EOF > /etc/sysctl.d/99-multi-vnic.conf
+net.ipv4.conf.all.rp_filter=2
+net.ipv4.conf.default.rp_filter=2
+net.ipv4.conf.ens3.rp_filter=2
+net.ipv4.conf.ens5.rp_filter=2
+EOF
+sysctl -p /etc/sysctl.d/99-multi-vnic.conf
+
+# 5. Ghi cấu hình Netplan cho card ens5 (Đã tích hợp Rule ép Docker đi qua VNIC 2)
 echo ">> Đang cấu hình mạng (Netplan) cho VNIC 2..."
 cat <<EOF > /etc/netplan/60-secondary-vnic.yaml
 network:
@@ -52,6 +62,8 @@ network:
             routing-policy:
                 - from: ${IP_ENS5}
                   table: 200
+                - from: 192.168.34.0/24
+                  table: 200
             routes:
                 - to: default
                   via: ${GATEWAY}
@@ -60,9 +72,9 @@ EOF
 
 netplan apply
 echo ">> Đang chờ mạng ổn định..."
-sleep 5 # Chờ vài giây để card mạng mới ổn định
+sleep 5
 
-# 5. Triển khai Docker và Iptables
+# 6. Triển khai Docker và Iptables
 TOKEN="tbOBkhRHWXCl8NHzr+/GF5qHDrWRo43PFU1XzPe+GGM="
 DEVICE_NAME="oracle"
 
@@ -84,10 +96,10 @@ iptables -t nat -I POSTROUTING -s 192.168.34.0/24 -j SNAT --to-source $IP_ENS5
 netfilter-persistent save
 
 # Khởi chạy Node Traffmonetizer
-echo ">> Đang chạy Container Traffmonetizer 1..."
+echo ">> Đang chạy Container Traffmonetizer 1 (Sử dụng IP VNIC 1)..."
 docker run -d --restart always --network my_network_1 --name tm_1 traffmonetizer/cli_v2 start accept --token "$TOKEN" --device-name "$DEVICE_NAME"
 
-echo ">> Đang chạy Container Traffmonetizer 2..."
+echo ">> Đang chạy Container Traffmonetizer 2 (Sử dụng IP VNIC 2)..."
 docker run -d --restart always --network my_network_2 --name tm_2 traffmonetizer/cli_v2 start accept --token "$TOKEN" --device-name "$DEVICE_NAME"
 
 echo "=========================================="
