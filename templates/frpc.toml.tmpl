@@ -1,0 +1,16 @@
+# File mau - configure.sh se thay cac __CHO_TRONG__ va ghi ra phone-agent/frpc.toml that.
+# Khong sua truc tiep file .tmpl nay; sua xong hay chay lai ./configure.sh de sinh lai frpc.toml.
+
+serverAddr = "__FRP_SERVER_ADDR__"
+serverPort = __FRP_BIND_PORT__
+
+[auth]
+method = "token"
+token = "__FRP_TOKEN__"
+
+[[proxies]]
+name = "phone-__PHONE_ID__"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = __LOCAL_SOCKS_PORT__
+remotePort = __REMOTE_PORT__

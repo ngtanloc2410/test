@@ -1,0 +1,9 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# File mau - configure.sh tu sinh ra termux-boot/proxy-from-mobile.sh (da thay duong dan that).
+# Sau khi chay ./configure.sh, copy file DA SINH RA (khong phai file .tmpl nay) vao
+# ~/.termux/boot/ de Termux:Boot tu chay khi khoi dong may:
+#   mkdir -p ~/.termux/boot
+#   cp ~/proxy-from-mobile/phone-agent/termux-boot/proxy-from-mobile.sh ~/.termux/boot/
+termux-wake-lock
+sleep 15  # cho mang 4G on dinh sau khi may vua khoi dong
+exec bash "__AGENT_HOME__/scripts/start.sh"
