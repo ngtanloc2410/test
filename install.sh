@@ -17,6 +17,22 @@ pkg update -y
 echo "==> Cai cac goi can thiet (curl, git, jq, clang/make de du phong build microsocks, termux-api)"
 pkg install -y curl git jq clang make termux-api
 
+# Kiem tra ngay curl co THUC SU chay duoc khong (khong chi la da cai) - tren mot so may Termux
+# moi cai/nhieu ngay chua upgrade, curl bi loi "CANNOT LINK EXECUTABLE ... SSL_set_quic_tls_
+# transport_params" do goi openssl va libngtcp2 lech phien ban nhau. Loi nay se lam hong ca
+# buoc build microsocks (can git clone qua https) lan buoc tai frpc ben duoi, nen phai bao
+# ngay tai day thay vi de nguoi dung thay 2-3 loi khac nhau don don, kho doan nguyen nhan that.
+if ! curl --version >/dev/null 2>&1; then
+  echo "" >&2
+  echo "LOI: curl da cai nhung khong chay duoc (thu vien openssl/libngtcp2 tren may dang lech" >&2
+  echo "phien ban voi nhau - hay gap sau khi cai Termux hoac lau chua upgrade)." >&2
+  echo "Cach sua, chay lan luot roi thu lai ./install.sh:" >&2
+  echo "  1. termux-change-repo   (chon 1 mirror cu the, dung de trong/mac dinh)" >&2
+  echo "  2. pkg update -y && pkg upgrade -y" >&2
+  echo "  3. curl --version       (kiem tra da het loi CANNOT LINK EXECUTABLE chua)" >&2
+  exit 1
+fi
+
 echo "==> Cai microsocks (SOCKS5 server nhe, dung lam proxy noi bo tren may)"
 if pkg install -y microsocks; then
   echo "    Da cai microsocks tu kho goi Termux."
@@ -41,8 +57,12 @@ case "$ARCH_RAW" in
   *) echo "Kien truc chua ho tro: $ARCH_RAW" >&2; exit 1 ;;
 esac
 
-FRP_VERSION="$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest \
-  | grep -m1 '"tag_name"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+# Doc TOAN BO output cua curl vao 1 bien truoc, roi moi grep tren bien do - khong duoc pipe
+# thang "curl | grep -m1" vi grep -m1 se dong pipe ngay khi tim thay dong dau tien, con curl
+# thi van dang co du lieu con lai can ghi tiep => curl bao loi "(23) Failure writing output"
+# (viet duoc 1 phan roi vo pipe) ngay ca khi mang hoan toan binh thuong.
+FRP_RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest)"
+FRP_VERSION="$(echo "$FRP_RELEASE_JSON" | grep -m1 '"tag_name"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
 if [ -z "$FRP_VERSION" ]; then
   echo "Khong lay duoc phien ban frp moi nhat (co the bi GitHub gioi han rate-limit), thu lai sau." >&2
   exit 1
